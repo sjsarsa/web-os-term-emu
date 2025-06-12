@@ -1,0 +1,101 @@
+<!doctype html>
+<title>Online Linux terminal 𓅦</title>
+<link rel="icon" href="public/favicon.png" />
+<meta charset="UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="src/style.css" />
+<link rel="stylesheet" href="src/xterm.css" />
+
+<script type="module" src="src/main.ts"></script>
+<script src="v86/build/libv86.js"></script>
+
+<div id="header">
+    <div>
+        Full Linux OS (Alpine) and terminal running entirely in your browser.
+    </div>
+    <div
+        style="display: flex; justify-content: end; margin: -8px -0px 0px -8px"
+    >
+        <div class="tooltip">
+            <span style="margin-right: 1rem">
+                <img
+                    src="/info.svg"
+                    type="image/svg+xml"
+                    style="height: 1.5rem; width: 1.5rem"
+                />
+            </span>
+            <span class="tooltiptext">
+                Default shell is bash. Only basic utilities available, no
+                network or GUI.
+                <br /><br />
+                Copy and paste works with Ctrl+Alt+C and Ctrl+Alt+V.
+                <br /><br />
+                The linux state is autosaved to your browser storage once every
+                minute. The base state requires roughly 80MB of space.
+                <br /><br />
+                Powered by
+                <a href="https://github.com/copy/v86" target="_blank">V86</a>,
+                <a href="https://alpinelinux.org" target="_blank"
+                    >Alpine Linux</a
+                >, and
+                <a href="https://xtermjs.org" target="_blank">xterm.js</a>.
+            </span>
+        </div>
+        <div class="tooltip">
+            <label class="button">
+                <input id="save_to_idb" type="button" />
+                Save state
+            </label>
+            <span class="tooltiptext">
+                Save current Linux state to browser storage manually.
+            </span>
+        </div>
+        <div class="tooltip">
+            <label class="button">
+                <input id="reset_state" type="button" />
+                Reset state
+            </label>
+            <span class="tooltiptext"
+                >Resets Linux state and deletes saved state from the browser
+                storage</span
+            >
+        </div>
+        <div class="tooltip">
+            <label class="button">
+                <input id="save_to_file" type="button" />
+                Download state
+            </label>
+            <span class="tooltiptext"
+                >Download current state as a binary file for later use</span
+            >
+        </div>
+        <div class="tooltip">
+            <label class="button">
+                <input id="restore_from_file" type="file" /> Load state from
+                file
+            </label>
+            <span class="tooltiptext"
+                >Load state from a previously downloaded file</span
+            >
+        </div>
+    </div>
+</div>
+
+<div id="v86-screen-container">
+    <div
+        style="
+            white-space: pre;
+            font: calc(14 + 1.5vw) monospace;
+            line-height: calc(14 + 1.5vw);
+        "
+    ></div>
+    <canvas></canvas>
+</div>
+<div id="xterm" autofocus>
+    <span
+        id="term-loader"
+        class="loader"
+        style="width: 5vh; height: 5vh; border-width: 1vh"
+    ></span>
+</div>
