@@ -20,7 +20,6 @@ let db: IDBDatabase
 let xterm: Terminal
 let xtermFit: FitAddon
 let emulator: any // V86 WASM OS emulator from libv86.js
-let booted = false
 
 // ------------------------------
 // Misc utils
@@ -136,17 +135,21 @@ const onTerminalInput = (key: { key: string; domEvent: KeyboardEvent }) => {
     console.debug('sent key: ' + key.key)
 }
 
+let outputInitialised = false
 const onTerminalOutput = (char: string) => {
     console.debug('output: ' + char)
-    xterm.write(char)
-    if (booted === false) {
-        console.debug('booted')
-        xtermFit.fit()
-        booted = true
+    if (outputInitialised) {
+        xterm.write(char)
+    } else {
+        console.debug(
+            'Initialisation output received, clearing terminal and resizing'
+        )
+        xterm.write(char)
+        xterm.clear()
 
-        setTimeout(() => {
-            setTerminalFocus() // TODO: investigate why this needs waiting
-        }, 300)
+        xtermFit.fit()
+        outputInitialised = true
+        setTerminalFocus()
     }
 }
 
@@ -184,12 +187,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     })
 
     emulator.add_listener('emulator-ready', () => {
-        // Wait and clear the terminal
+        // Send a CTRL+L character to clear the terminal and
         setTimeout(() => {
-            emulator.serial0_send('')
-            emulator.serial0_send('')
-            hideElementById('term-loader')
-        }, 300)
+          emulator.serial0_send('')
+          hideElementById('term-loader')
+        }, 1500)
     })
 })
 
