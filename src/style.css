@@ -1,0 +1,140 @@
+#info-icon {
+    background-color: wheat;
+    -webkit-mask: url(/info.svg) no-repeat center;
+    mask: url(/info.svg) no-repeat center;
+}
+
+#v86-screen-container {
+    display: none;
+}
+
+#header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    height: 4rem;
+}
+
+#xterm {
+    height: calc(100vh - 4rem) !important;
+    width: 100vw !important;
+    color: #ccc;
+    font-family: monospace;
+    font-size: 14px;
+}
+
+body {
+    background-color: #111;
+    color: #ccc;
+    margin: 0;
+    padding: 0;
+    line-height: 1.5;
+    font-family: sans-serif;
+    overflow: hidden;
+}
+
+button,
+.button {
+    background-color: #222;
+    color: wheat;
+    border: 1px solid #555;
+    padding: 6px 12px;
+    margin-left: 10px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+*:has(> input:disabled),
+*:has(> .input:disabled) {
+    background-color: #333;
+    color: #666;
+    cursor: not-allowed;
+}
+
+input[type='button'],
+input[type='submit'],
+input[type='file'] {
+    display: none;
+}
+
+a {
+    color: wheat;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+label {
+    user-select: none;
+    white-space: nowrap;
+}
+input[type='checkbox'] {
+    vertical-align: middle;
+    position: relative;
+    bottom: 1px;
+    margin: 0;
+}
+
+embed svg,
+object svg,
+svg {
+    fill: wheat;
+}
+
+.tooltip {
+    position: relative;
+    display: inline-block;
+    border-bottom: 1px dotted black;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 120px;
+    top: 100%;
+    left: 50%;
+    background-color: #333;
+    color: #ccc;
+    text-align: center;
+    margin-left: -60px;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.5rem;
+    border-radius: 6px;
+
+    position: absolute;
+    z-index: 1;
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+}
+
+.loader {
+    width: 1rem;
+    height: 1rem;
+    border: 0.2rem solid #ccc;
+    border-bottom-color: transparent;
+    border-radius: 50%;
+    display: inline-block;
+    box-sizing: border-box;
+    animation: spin 1s linear infinite;
+    background-color: transparent;
+    position: relative;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Remove the scrollbar from xterm */
+.xterm-viewport {
+    overflow-y: hidden !important;
+}
