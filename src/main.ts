@@ -40,6 +40,7 @@ const setTerminalFocus = () => {
     if (xtermInputEl) {
         xtermInputEl.focus()
         xtermInputEl.select()
+        xtermInputEl.click()
         console.debug('Focused xterm input element')
     } else {
         console.warn('Could not find xterm input element to focus')
@@ -48,11 +49,11 @@ const setTerminalFocus = () => {
 
 const resetTerminal = () => {
     // Clear the xterm display
-    xterm.clear()
-    // Clear the OS terminal
-    emulator.serial0_send('')
+    xterm.reset()
     // Resize the terminal
     xtermFit.fit()
+    // Write the initial message
+    xterm.write('localhost:~# ')
     // Focus the terminal input
     setTerminalFocus()
 }
@@ -135,22 +136,9 @@ const onTerminalInput = (key: { key: string; domEvent: KeyboardEvent }) => {
     console.debug('sent key: ' + key.key)
 }
 
-let outputInitialised = false
 const onTerminalOutput = (char: string) => {
     console.debug('output: ' + char)
-    if (outputInitialised) {
-        xterm.write(char)
-    } else {
-        console.debug(
-            'Initialisation output received, clearing terminal and resizing'
-        )
-        xterm.write(char)
-        xterm.clear()
-
-        xtermFit.fit()
-        outputInitialised = true
-        setTerminalFocus()
-    }
+    xterm.write(char)
 }
 
 // ----------------------------
@@ -187,11 +175,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     })
 
     emulator.add_listener('emulator-ready', () => {
-        // Send a CTRL+L character to clear the terminal and
-        setTimeout(() => {
-          emulator.serial0_send('')
-          hideElementById('term-loader')
-        }, 1500)
+        resetTerminal()
+        hideElementById('term-loader')
     })
 })
 

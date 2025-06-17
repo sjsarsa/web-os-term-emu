@@ -104,13 +104,14 @@ svg {
     padding: 0.5rem 0.5rem;
     border-radius: 6px;
     max-height: 80vh;
-
     position: absolute;
     z-index: 1;
     overflow: auto;
 }
 
-.tooltip:hover .tooltiptext {
+.tooltip:hover .tooltiptext,
+.tooltip:focus .tooltiptext,
+.tooltip:active .tooltiptext {
     visibility: visible;
 }
 
