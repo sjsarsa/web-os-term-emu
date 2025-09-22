@@ -1,0 +1,57 @@
+# Tämä on otsikko
+
+Tämä tiedosto on kirjoitettu Markdown-muodossa, ja se voi sisältää erilaisia osioita, kuten otsikoita, listoja, linkkejä ja kuvia.
+
+## Alaotsikko 1
+
+Esimerkki listasta:
+
+- Kohta 1
+- Kohta 2
+- Kohta 3
+
+Esimerkki numeroidusta listasta:
+
+1. Ensimmäinen
+2. Toinen
+3. Kolmas
+
+Esimerkki koodilohkosta:
+
+```python
+def tervehdys(nimi):
+    return f"Hei, {nimi}!"
+print(tervehdys("Maailma"))
+```
+
+Esimerkki lainauksesta:
+
+> Tämä on lainaus esimerkkinä.
+
+Esimerkki erottimesta:
+
+---
+
+## Alaotsikko 2
+
+Esimerkki linkistä: [esimerkkilinkki](https://www.example.com)
+
+Esimerkki kuvasta:
+![Esimerkkikuva](https://www.example.com/image.jpg)
+
+## Alaotsikko 3
+
+Tässä on vielä lisää tekstiä ja esimerkkejä Markdownin käytöstä.
+Voit käyttää **lihavoitua** tai *kursivoitua* tekstiä tarpeen mukaan.
+
+Voit myös luoda taulukoita:
+| Sarake 1 | Sarake 2 | Sarake 3 |
+|----------|----------|----------|
+| Arvo 1   | Arvo 2   | Arvo 3   |
+| Arvo 4   | Arvo 5   | Arvo 6   |
+
+Mikäli tarvitset lisämuotoilua, voit käyttää HTML:ää suoraan Markdownin sisällä. Esimerkiksi:
+
+<div style="color: sandybrown; font-weight: bold;">
+  Tämä on HTML:llä muotoiltu teksti.
+</div>
