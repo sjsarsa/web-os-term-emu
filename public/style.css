@@ -17,7 +17,7 @@
 }
 
 #xterm {
-    height: calc(100vh - 4rem) !important;
+    height: calc(100vh - 5rem) !important;
     width: 100vw !important;
     color: #ccc;
     font-family: monospace;
@@ -31,7 +31,7 @@ body {
     padding: 0;
     line-height: 1.5;
     font-family: sans-serif;
-    overflow: hidden;
+    overflow: auto;
 }
 
 button,
@@ -100,7 +100,7 @@ svg {
     color: #ccc;
     text-align: center;
     margin-left: -60px;
-    margin-top: 0.5rem;
+    margin-top: 0;
     padding: 0.5rem 0.5rem;
     border-radius: 6px;
     max-height: 80vh;

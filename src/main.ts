@@ -1,13 +1,16 @@
-import { Terminal } from '@xterm/xterm'
-import { FitAddon } from '@xterm/addon-fit'
-
 import {
     initDB,
     getInitURL,
-    saveStateToDB,
+    saveEmulatorStateToDB,
     defaultState,
     clearStateFromDB,
 } from './state.ts'
+import {
+    initXterm,
+    resetTerminal,
+    setTerminalFocus,
+    setXtermEmulator,
+} from './terminal.ts'
 
 // Disable debugging messages in production
 // @ts-ignore: import.meta.env is available in Vite
@@ -16,9 +19,11 @@ if (import.meta.env.PROD) {
 }
 
 // Globals (TODO: refactor, we probably don't need all of these as globals)
+const DIST_ID = 'alpine'
+const DIST_NAME = 'Alpine'
+const AUTO_SAVE_INTERVAL_SECONDS = 60 // seconds
+
 let db: IDBDatabase
-let xterm: Terminal
-let xtermFit: FitAddon
 let emulator: any // V86 WASM OS emulator from libv86.js
 
 // ------------------------------
@@ -32,48 +37,25 @@ const hideElementById = (id: string) => {
     }
 }
 
-const setTerminalFocus = () => {
-    const xtermInputEl = document
-        .getElementById('xterm')
-        ?.getElementsByTagName('textarea')
-        .item(0)
-    if (xtermInputEl) {
-        xtermInputEl.focus()
-        xtermInputEl.select()
-        xtermInputEl.click()
-        console.debug('Focused xterm input element')
-    } else {
-        console.warn('Could not find xterm input element to focus')
-    }
-}
-
-const resetTerminal = () => {
-    // Clear the xterm display
-    xterm.reset()
-    // Resize the terminal
-    xtermFit.fit()
-    // Write the initial message
-    xterm.write('localhost:~# ')
-    // Focus the terminal input
-    setTerminalFocus()
-}
-
 // -----------------------------
 // Init utils
 // -----------------------------
 
-const initEmulator = (initState: { url: string }) => {
+const initEmulator = (initState: { url: string } | undefined) => {
     // @ts-ignore: V86 is provided from build/libv86.js in index.html
     const v86Emulator = new V86({
         wasm_path: 'v86/build/v86.wasm',
-        memory_size: 512 * 1024 * 1024,
+        memory_size: 256 * 1024 * 1024,
         vga_memory_size: 8 * 1024 * 1024,
         screen_container: document.getElementById('v86-screen-container'),
         bios: { url: 'v86/bios/seabios.bin' }, // TODO: add bios? Are these even needed with filesystem?
         vga_bios: { url: 'v86/bios/vgabios.bin' },
+        // cdrom: {
+        //     url: `/v86-linux.iso`,
+        // },
         filesystem: {
-            baseurl: 'v86/images/alpine-rootfs-flat',
-            basefs: 'v86/images/alpine-fs.json',
+            baseurl: `v86/images/${DIST_ID}-rootfs-flat`,
+            basefs: `v86/images/${DIST_ID}-fs.json`,
         },
         bzimage_initrd_from_filesystem: true,
         autostart: true,
@@ -84,71 +66,26 @@ const initEmulator = (initState: { url: string }) => {
     return v86Emulator
 }
 
-const initXterm = () => {
-    xterm = new Terminal()
-    const termcontainer = document.getElementById('xterm')
-    xterm.open(termcontainer)
-
-    // Initialize the xterm-fit addon
-    xtermFit = new FitAddon()
-    xterm.loadAddon(xtermFit)
-    xtermFit.fit()
-    return xterm
-}
-
-// Resize terminal on window resize
-window.addEventListener('resize', () => {
-    xtermFit.fit()
-})
-
-// ----------------------------
-// Event handlers
-// ----------------------------
-
-const onTerminalInput = (key: { key: string; domEvent: KeyboardEvent }) => {
-    // Paste (Ctrl+Alt+V)
-    if (
-        key.domEvent.ctrlKey &&
-        key.domEvent.altKey &&
-        key.domEvent.key == 'v'
-    ) {
-        console.debug('paste')
-        navigator.clipboard.readText().then((text) => {
-            emulator.serial0_send(text)
-        })
-        return
-    }
-
-    // Copy (Ctrl+Alt+C)
-    if (
-        key.domEvent.ctrlKey &&
-        key.domEvent.altKey &&
-        key.domEvent.key == 'c'
-    ) {
-        console.debug('copy')
-        document.execCommand('copy')
-        return
-    }
-
-    // Send keys from xterm to v86
-    emulator.serial0_send(key.key)
-
-    console.debug('sent key: ' + key.key)
-}
-
-const onTerminalOutput = (char: string) => {
-    console.debug('output: ' + char)
-    xterm.write(char)
-}
-
 // ----------------------------
 // Main execution
 // ----------------------------
-document.addEventListener('DOMContentLoaded', async () => {
+const startup = async () => {
+    // disable action buttons
+    const actionButtonInputs = document.querySelectorAll(
+        // '.button:not(#restore_from_file)'
+        'input[type="button"], input[type="file"]'
+    )
+    actionButtonInputs.forEach((input) => {
+        if (input instanceof HTMLInputElement) {
+            input.disabled = true
+        }
+    })
+
     // Initialize xterm.js
-    xterm = initXterm()
+    let xterm = initXterm()
     console.debug('xterm initialized')
-    xterm.write(`\x1B[1;3;32mAlpine Linux loading...\x1B[0m\r\n`)
+    xterm.reset()
+    xterm.write(`\x1B[1;3;32m${DIST_NAME} Linux loading...\x1B[0m\r\n`)
 
     // Initialize IndexedDB for state management
     db = await initDB()
@@ -156,33 +93,79 @@ document.addEventListener('DOMContentLoaded', async () => {
     const osStateInitURL = await getInitURL(db)
 
     // Initialize the v86 emulator
-    emulator = initEmulator({ url: osStateInitURL })
+    emulator = initEmulator(
+        osStateInitURL ? { url: osStateInitURL } : undefined
+    )
     console.debug('emulator initialized')
+
+    if (osStateInitURL === undefined) {
+        xterm.reset()
+        xterm.clear()
+        xterm.write(`booting... this may take a minute\r\n`)
+
+        let seconds = 0
+        const bootWaitLogger = setInterval(() => {
+            seconds += 5
+            console.debug(`Waiting for boot... ${seconds} seconds`)
+        }, 5 * 1000)
+
+        let serial_text = ''
+
+        const waitForBoot = new Promise<void>((resolve) => {
+            const listenerFunction = (byte: any) => {
+                const c = String.fromCharCode(byte)
+                serial_text += c
+
+                if (serial_text.endsWith('localhost:~# ')) {
+                    console.debug('Boot complete')
+                    xterm.write(serial_text)
+                    emulator.remove_listener(
+                        'serial0-output-byte',
+                        listenerFunction
+                    )
+                    clearInterval(bootWaitLogger)
+                    resolve()
+                }
+            }
+            emulator.add_listener('serial0-output-byte', listenerFunction)
+        })
+
+        await waitForBoot
+    } else {
+        const waitForEmulatorReady = new Promise<void>((resolve) => {
+            emulator.add_listener('emulator-ready', () => {
+                resetTerminal()
+                console.debug('Emulator is ready')
+                resolve()
+            })
+        })
+
+        await waitForEmulatorReady
+    }
+
+    await setXtermEmulator(emulator)
+    hideElementById('term-loader')
+    setTerminalFocus()
+
+    // enable action buttons
+    actionButtonInputs.forEach((input) => {
+        if (input instanceof HTMLInputElement) {
+            input.disabled = false
+        }
+    })
 
     // Save state to IndexedDB every 60 seconds
     setInterval(async () => {
-        const new_state = await emulator.save_state()
-        await saveStateToDB(new_state, db)
-    }, 60 * 1000)
+        await saveEmulatorStateToDB(emulator, db)
+    }, AUTO_SAVE_INTERVAL_SECONDS * 1000)
+}
 
-    // Forward keystrokes from xterm to v86
-    xterm.onKey((key) => onTerminalInput(key))
-
-    // Forward output from v86 to xterm and other functions
-    emulator.add_listener('serial0-output-byte', (byte: any) => {
-        const char = byte && String.fromCharCode(byte)
-        char && onTerminalOutput(char)
-    })
-
-    emulator.add_listener('emulator-ready', () => {
-        resetTerminal()
-        hideElementById('term-loader')
-    })
-})
+document.addEventListener('DOMContentLoaded', startup)
 
 // ----------------------------
 // Button actions
 // ----------------------------
+
 const setButtonActionInProgress = (buttonId: string) => {
     const button = document.getElementById(buttonId) as HTMLButtonElement
     if (!button) {
@@ -215,8 +198,7 @@ document.getElementById(saveButtonId).onclick = async (event) => {
     event.preventDefault()
     setButtonActionInProgress(saveButtonId)
 
-    const new_state = await emulator.save_state()
-    await saveStateToDB(new_state, db).catch((error) => {
+    await saveEmulatorStateToDB(emulator, db).catch((error) => {
         console.error('Failed to save state to IndexedDB:', error)
         alert('Failed to save state to IndexedDB. Please try again later.')
     })
@@ -235,26 +217,47 @@ document.getElementById(resetButtonId).onclick = async () => {
         (res) => res.arrayBuffer()
     )
 
-    await emulator.restore_state(defaultStateAsArrayBuffer)
+    await emulator
+        .restore_state(defaultStateAsArrayBuffer)
+        .then(async () => {
+            await clearStateFromDB(db)
+        })
+        .catch(async (error: any) => {
+            console.debug('Failed to restore default state:', error)
+            const answer = confirm(
+                'Default state not found. Do you want to reboot the system?'
+            )
+
+            if (!answer) {
+                setButtonActionDone(resetButtonId)
+                return
+            }
+
+            await clearStateFromDB(db)
+            location.reload()
+        })
+
     emulator.run()
 
-    await clearStateFromDB(db)
     setButtonActionDone(resetButtonId)
     resetTerminal()
 }
 
-// TODO: refactor huge function (to its own file?)
 const saveToFileButtonId = 'save_to_file'
 document.getElementById(saveToFileButtonId).onclick = async function () {
-    const new_state = await emulator.save_state()
-    var a = document.createElement('a')
-    a.download = 'v86state.bin'
-    a.href = window.URL.createObjectURL(new Blob([new_state]))
-    a.dataset.downloadurl =
-        'application/octet-stream:' + a.download + ':' + a.href
-    a.click()
+    // wait for the emulator to finish processing the command
+    setTimeout(async () => {
+        const new_state = await emulator.save_state()
+        var a = document.createElement('a')
+        a.download = 'v86state.bin'
+        a.href = window.URL.createObjectURL(new Blob([new_state]))
+        a.dataset.downloadurl =
+            'application/octet-stream:' + a.download + ':' + a.href
+        a.click()
+    }, 3000)
 }
 
+// TODO: refactor huge function (to its own file?)
 const restoreFromFileButtonId = 'restore_from_file'
 document
     .getElementById(restoreFromFileButtonId)
